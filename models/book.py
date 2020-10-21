@@ -1,3 +1,8 @@
+import asyncio
+import functools
+import math
+import os
+import threading
 from queue import Queue
 from util.scheduler import Scheduler
 from util.project_util import *
@@ -7,7 +12,7 @@ from util.logger import logger
 
 
 class Book:
-    def __init__(self, info_page_url,log_option=dict, download=True):
+    def __init__(self, info_page_url,log_option=dict):
         self.info_page_url = info_page_url
         res = Session().request("GET", self.info_page_url)
         if res is None: return
@@ -22,7 +27,10 @@ class Book:
         self.max_page = 0
 
         self.init_from_net()
-        if download and not self.downloaded_book(): self.download_book()
+
+    def download(self):
+        if not self.downloaded_book():
+            asyncio.run(self.download_book())
 
     def init_from_net(self):
         # gid, tumb_url
@@ -69,7 +77,7 @@ class Book:
                 is_downloaded=checkFromTemp(dirTitle)if isTemp else checkFromDir(dirTitle)
         return is_downloaded
 
-    def download_book(self):
+    async def download_book(self):
         logger.info("[{}](pages:{}){}".format(self.log_option['result_page'], self.max_page, self.title))
         path = DOWNLOAD_DIR_PATH + '/' + self.title
 
@@ -79,20 +87,28 @@ class Book:
             return False
 
         mkdir(path, DOWNLOAD_DIR_PATH + '/' + "[" + self.gid + "]")
-        que = Queue()
-        def job(start, end):
-            for page in range(start, end):
-                url='{}/galleries/{}/{}.{}'.format(GALLERY_PATH,self.gid,str(page),self.sub_file_name)
-                title = get_pic_name(url)
-                if downloaded_img(title): continue
-                res = Session().request("GET", url, title=self.title)
-                if res is None:
-                    pass
-                else:
-                    open(path + "/" + title, 'wb').write(res.content)
-                    logger.info("got:{},({})".format(url, self.max_page))
 
-        Scheduler(1,self.max_page,THREAD_CNT,que,job,WAIT_OTHER_THREAD)
+        async def fetch(page):
+            url='{}/galleries/{}/{}.{}'.format(GALLERY_PATH,self.gid,str(page),self.sub_file_name)
+            title = get_pic_name(url)
+            if downloaded_img(title): return
+
+            # res = await Session().request("GET",url,title=self.title)
+            res=await asyncio.get_event_loop().run_in_executor(None,functools.partial(
+                Session().request,
+                method="GET",
+                url=url,
+                title=self.title
+            ))
+            if res is None:
+                pass
+            else:
+                open(path + "/" + title, 'wb').write(res.content)
+                logger.info("got:{},({})".format(url, self.max_page))
+
+        await asyncio.gather(
+            *[fetch(page) for page in range(1, self.max_page+1)]
+        )
 
         if self.downloaded_book(isTemp=False):
             if CLOUD_MODE:

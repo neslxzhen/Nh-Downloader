@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 import json
 from util.logger import logger
 from const import *
-from util import *
 
 # Project
 def like(s1, s2):

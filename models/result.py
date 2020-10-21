@@ -24,7 +24,7 @@ class Result:
             logger.debug('page: ' + str(page) + " res.status:" + str(res))
             for book in BeautifulSoup(html, 'html.parser').select('div.gallery'):
                 d=self.get_book_info(book)
-                Book(d['info_page_url'],log_option={'result_page':page})
+                Book(d['info_page_url'],log_option={'result_page':page}).download()
 
     def get_book_info(self,soup):
         d={}

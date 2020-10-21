@@ -1,7 +1,8 @@
+import asyncio
+
 from models.book import Book
 from models.result import Result
 from util.project_util import dir_list_file_generator
-
 
 # main
 d={
@@ -22,7 +23,7 @@ if inp == 'a':
 elif inp == 'b':
     inp = input("輸入本子的連結: ")
     if inp == "#":
-        Book('https://nhentai.net/g/323287/',log_option={'result_page':'test'})
+        Book('https://nhentai.net/g/323287/',log_option={'result_page':'test'}).download()
     else:
         Book(inp.strip())
 
