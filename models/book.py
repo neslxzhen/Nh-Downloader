@@ -12,14 +12,26 @@ class Book:
         res = Session().request("GET", self.info_page_url)
         if res is None: return
         self.soup = BeautifulSoup(res.content, 'html.parser')
-
         self.title = None
         self.log_option = log_option
         self.sub_file_name = None
+
         self.gid = None
         self.token = None
+        self.archiver_key = None
+        self.jpn_title=None
+        self.en_title=None
+        self.category=None
         self.tumb_url = None
+        self.uploader = None
+        self.posted = None
         self.max_page = 0
+        self.filesize = None
+        self.expunged = None
+        self.rating = None
+        self.torrentcount = None
+        self.torrents = None
+        self.tags = None
 
         self.init_from_net()
         if download and not self.downloaded_book(): self.download_book()
@@ -33,17 +45,27 @@ class Book:
 
         # title
         self.title = self.soup.select_one("div#info h1").text
+        self.en_title=self.title
         if USE_JPN_TITLE:
             try:
                 self.title = self.soup.select_one("div#info h2").text
+                self.jpn_title=self.title
             except AttributeError: pass
         self.title = check_dir_name(self.title)
 
-        # sub_file_name
+        # sub_file_name, max_page
         self.sub_file_name = get_sub_pic_name(self.tumb_url)
-
-        # max_page
         self.max_page = int(self.soup.select_one("div#info section#tags a[class='tag'] span.name").text)
+
+        self.category=None
+        self.uploader = None
+        self.posted = None
+        self.filesize = None
+        self.expunged = None
+        self.rating = None
+        self.torrentcount = None
+        self.torrents = None
+        self.tags = None
 
     def downloaded_book(self,isTemp=CLOUD_MODE):
         def checkFromDir(title):
@@ -73,12 +95,34 @@ class Book:
         logger.info("[{}](pages:{}){}".format(self.log_option['result_page'], self.max_page, self.title))
         path = DOWNLOAD_DIR_PATH + '/' + self.title
 
+        def writeJson():
+            json.dump({
+                'gid':self.gid,
+                "token": self.token,
+                "archiver_key":self.archiver_key,
+                "title": self.en_title,
+                "title_jpn": self.jpn_title,
+                "category": self.category,
+                "thumb": self.tumb_url,
+                "uploader": self.uploader,
+                "posted": self.posted,
+                "filecount": self.max_page,
+                "filesize": self.filesize,
+                "expunged": self.expunged,
+                "rating": self.rating,
+                "torrentcount": self.torrentcount,
+                "torrents": self.torrents,
+                "tags":self.tags
+            },open(path+"/_meta.json",'w',encoding='utf-8'), ensure_ascii=False)
+
         def downloaded_img(img_title):
             if os.path.isfile(path + img_title):
                 return True
             return False
 
         mkdir(path, DOWNLOAD_DIR_PATH + '/' + "[" + self.gid + "]")
+        writeJson()
+
         que = Queue()
         def job(start, end):
             for page in range(start, end):
