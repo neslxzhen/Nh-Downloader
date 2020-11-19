@@ -2,6 +2,8 @@ import os
 import re
 import sys
 import traceback
+from zipfile import ZipFile
+
 from bs4 import BeautifulSoup
 import json
 from util.logger import logger
@@ -28,7 +30,7 @@ def get_sub_pic_name(url):
 
 
 def check_dir_name(name):
-    name = re.sub(r'[:!\\*"<>?/|]*', "", name).strip()
+    name = re.sub(r'[:!\\*"<>?/|	]*', "", name).strip()
     # if len(name)>96:name=name[:96]
     if len(name) > 95: name = name[:95]
     name = name.strip()
@@ -54,37 +56,45 @@ def book_logger(title, msg):
     logger.warning(title + "," + msg)
 
 
-def mkdir(path, err_path):
-    try:
-        os.makedirs(path)
-    except FileExistsError:
-        pass
-    except OSError:
-        if err_path is not None:
-            mkdir(err_path, None)
+def mkdir(*paths):
+    for path in paths:
+        try:
+            os.makedirs(path)
+            return path
+        except FileExistsError:
+            return path
+        except OSError:
+            pass
 
+def zip_list_file_generator():
+    print("生產目錄清單中...")
+    f = open(ZIP_LIST_TEMP_NAME, 'w' if os.path.isfile(ZIP_LIST_TEMP_NAME) else 'a', encoding='utf-8')
+    for zip in os.listdir(ZIP_DIR_PATH):
+        f.write(getZipList(zip) + "\n")
+    print("生產完畢")
+
+def getZipList(zip:str) -> str:
+    file_list = [file.filename for file in ZipFile(ZIP_DIR_PATH+"/"+check_dir_name(zip),'r').infolist()]
+    return json.dumps({
+        "title": zip,
+        "file_list": file_list,
+        "pics_list": [int(getNo(name)) for name in file_list if getNo(name) is not None]
+    }, ensure_ascii=False)
 
 def dir_list_file_generator():
     print("生產目錄清單中...")
-    f = None
-    if os.path.isfile(DIR_LIST_TEMP_NAME):
-        f = open(DIR_LIST_TEMP_NAME, 'w', encoding='utf-8')
-    else:
-        f = open(DIR_LIST_TEMP_NAME, 'a', encoding='utf-8')
-
+    f = open(DIR_LIST_TEMP_NAME, 'w' if os.path.isfile(DIR_LIST_TEMP_NAME) else 'a', encoding='utf-8')
     for dir in os.listdir(DOWNLOAD_DIR_PATH):
-        f.write(getLine(dir) + "\n")
+        f.write(getDirList(dir) + "\n")
     print("生產完畢")
 
-
-def getLine(dir):
-    file_list = [name for name in os.listdir(DOWNLOAD_DIR_PATH + "/" + dir)]
+def getDirList(dir):
+    file_list = [name for name in os.listdir(DOWNLOAD_DIR_PATH + "/" + check_dir_name(dir))]
     return json.dumps({
         "title": dir,
         "file_list": file_list,
         "pics_list": [int(getNo(name)) for name in file_list if getNo(name) is not None]
     }, ensure_ascii=False)
-
 
 def getNo(name):
     ld = re.sub(r'\D+\.*(jpg|png)*', '', name)

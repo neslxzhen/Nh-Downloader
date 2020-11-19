@@ -1,4 +1,5 @@
 download/
+zip/
 .idea/
 t.py
 .vscode/
@@ -143,3 +144,4 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+zip_list_temp.txt

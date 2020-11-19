@@ -2,13 +2,14 @@ import asyncio
 
 from models.book import Book
 from models.result import Result
-from util.project_util import dir_list_file_generator
+from util.project_util import dir_list_file_generator, zip_list_file_generator
 
 # main
 d={
     'a':"下載搜尋結果",
     'b':"下載本子",
     'c':"生產目錄清單",
+    'd':"生產ZIP清單",
     'input':''
 }
 inp = input("\n".join([key+"> "+d[key] for key in d]))
@@ -29,4 +30,7 @@ elif inp == 'b':
 
 elif inp == 'c':
     dir_list_file_generator()
+
+elif inp == 'd':
+    zip_list_file_generator()
 
